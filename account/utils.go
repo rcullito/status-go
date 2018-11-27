@@ -1,6 +1,7 @@
 package account
 
 import (
+	"crypto/ecdsa"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -13,10 +14,19 @@ var (
 	ErrInvalidAccountAddressOrKey = errors.New("cannot parse address or key to valid account address")
 )
 
+type AccountType int
+
+const (
+	AccountTypeKeystore AccountType = iota
+	AccountTypeKeycard
+)
+
 // SelectedExtKey is a container for the selected (logged in) external account.
 type SelectedExtKey struct {
+	Type        AccountType
 	Address     common.Address
 	AccountKey  *keystore.Key
+	WhisperKey  *ecdsa.PrivateKey
 	SubAccounts []accounts.Account
 }
 

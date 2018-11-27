@@ -7,14 +7,13 @@ import (
 	"math/big"
 	"sync"
 
+	fcmlib "github.com/NaySoftware/go-fcm"
 	gethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	gethnode "github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-
-	fcmlib "github.com/NaySoftware/go-fcm"
-
 	"github.com/status-im/status-go/account"
 	"github.com/status-im/status-go/node"
 	"github.com/status-im/status-go/notifications/push/fcm"
@@ -27,6 +26,7 @@ import (
 	"github.com/status-im/status-go/services/typeddata"
 	"github.com/status-im/status-go/signal"
 	"github.com/status-im/status-go/transactions"
+	whisper "github.com/status-im/whisper/whisperv6"
 )
 
 const (
@@ -394,7 +394,7 @@ func (b *StatusBackend) reSelectAccount() error {
 	switch err {
 	case node.ErrServiceUnknown: // Whisper was never registered
 	case nil:
-		if err := whisperService.SelectKeyPair(selectedAccount.AccountKey.PrivateKey); err != nil {
+		if err := b.injectWhisperIdentity(whisperService, selectedAccount); err != nil {
 			return ErrWhisperIdentityInjectionFailure
 		}
 	default:
@@ -424,7 +424,7 @@ func (b *StatusBackend) SelectAccount(address, password string) error {
 	switch err {
 	case node.ErrServiceUnknown: // Whisper was never registered
 	case nil:
-		if err := whisperService.SelectKeyPair(acc.AccountKey.PrivateKey); err != nil {
+		if err := b.injectWhisperIdentity(whisperService, acc); err != nil {
 			return ErrWhisperIdentityInjectionFailure
 		}
 	default:
@@ -438,6 +438,51 @@ func (b *StatusBackend) SelectAccount(address, password string) error {
 		}
 
 		if err := st.InitProtocol(address, password); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *StatusBackend) SelectKeycardAccount(walletAddress, whisperKeyHex string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	whisperKey, err := ethcrypto.HexToECDSA(whisperKeyHex)
+	if err != nil {
+		return err
+	}
+
+	err = b.accountManager.SelectKeycardAccount(whisperKey)
+	if err != nil {
+		return err
+	}
+
+	acc, err := b.accountManager.SelectedAccount()
+	if err != nil {
+		return err
+	}
+
+	whisperService, err := b.statusNode.WhisperService()
+	switch err {
+	case node.ErrServiceUnknown: // Whisper was never registered
+	case nil:
+		if err := b.injectWhisperIdentity(whisperService, acc); err != nil {
+			return ErrWhisperIdentityInjectionFailure
+		}
+	default:
+		return err
+	}
+
+	if whisperService != nil {
+		st, err := b.statusNode.ShhExtService()
+		if err != nil {
+			return err
+		}
+
+		password := ""
+		if err := st.InitProtocol(walletAddress, password); err != nil {
 			return err
 		}
 	}
@@ -474,7 +519,7 @@ func (b *StatusBackend) CreateContactCode() (string, error) {
 		return "", err
 	}
 
-	bundle, err := st.GetBundle(selectedAccount.AccountKey.PrivateKey)
+	bundle, err := st.GetBundle(selectedAccount.WhisperKey)
 	if err != nil {
 		return "", err
 	}
@@ -500,7 +545,7 @@ func (b *StatusBackend) ProcessContactCode(contactCode string) error {
 		return err
 	}
 
-	if _, err := st.ProcessPublicBundle(selectedAccount.AccountKey.PrivateKey, bundle); err != nil {
+	if _, err := st.ProcessPublicBundle(selectedAccount.WhisperKey, bundle); err != nil {
 		b.log.Error("error adding bundle", "err", err)
 		return err
 	}
@@ -530,7 +575,15 @@ func (b *StatusBackend) SignGroupMembership(content string) (string, error) {
 		return "", err
 	}
 
-	return crypto.Sign(content, selectedAccount.AccountKey.PrivateKey)
+	return crypto.Sign(content, selectedAccount.WhisperKey)
+}
+
+func (b *StatusBackend) injectWhisperIdentity(w *whisper.Whisper, account *account.SelectedExtKey) error {
+	if err := w.SelectKeyPair(account.WhisperKey); err != nil {
+		return ErrWhisperIdentityInjectionFailure
+	}
+
+	return nil
 }
 
 // EnableInstallation enables an installation for multi-device sync.

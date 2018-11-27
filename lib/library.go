@@ -314,6 +314,11 @@ func Login(address, password *C.char) *C.char {
 	return makeJSONResponse(err)
 }
 
+func LoginWithKeycard(address, whisperKeyData *C.char) *C.char {
+	err := statusBackend.SelectKeycardAccount(C.GoString(address), C.GoString(whisperKeyData))
+	return makeJSONResponse(err)
+}
+
 //Logout is equivalent to clearing whisper identities
 //export Logout
 func Logout() *C.char {

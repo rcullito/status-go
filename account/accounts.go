@@ -1,6 +1,7 @@
 package account
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -241,9 +242,23 @@ func (m *Manager) SelectAccount(address, password string) error {
 		return err
 	}
 	m.selectedAccount = &SelectedExtKey{
+		Type:        AccountTypeKeystore,
 		Address:     account.Address,
 		AccountKey:  accountKey,
+		WhisperKey:  accountKey.PrivateKey,
 		SubAccounts: subAccounts,
+	}
+
+	return nil
+}
+
+func (m *Manager) SelectKeycardAccount(whisperKey *ecdsa.PrivateKey) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.selectedAccount = &SelectedExtKey{
+		Type:       AccountTypeKeycard,
+		WhisperKey: whisperKey,
 	}
 
 	return nil
