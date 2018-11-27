@@ -14,16 +14,16 @@ var (
 	ErrInvalidAccountAddressOrKey = errors.New("cannot parse address or key to valid account address")
 )
 
-type AccountType int
+type Type int
 
 const (
-	AccountTypeKeystore AccountType = iota
-	AccountTypeKeycard
+	TypeKeystore Type = iota
+	TypeKeycard
 )
 
 // SelectedExtKey is a container for the selected (logged in) external account.
 type SelectedExtKey struct {
-	Type        AccountType
+	Type        Type
 	Address     common.Address
 	AccountKey  *keystore.Key
 	WhisperKey  *ecdsa.PrivateKey

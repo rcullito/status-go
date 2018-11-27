@@ -242,7 +242,7 @@ func (m *Manager) SelectAccount(address, password string) error {
 		return err
 	}
 	m.selectedAccount = &SelectedExtKey{
-		Type:        AccountTypeKeystore,
+		Type:        TypeKeystore,
 		Address:     account.Address,
 		AccountKey:  accountKey,
 		WhisperKey:  accountKey.PrivateKey,
@@ -257,7 +257,7 @@ func (m *Manager) SelectKeycardAccount(whisperKey *ecdsa.PrivateKey) error {
 	defer m.mu.Unlock()
 
 	m.selectedAccount = &SelectedExtKey{
-		Type:       AccountTypeKeycard,
+		Type:       TypeKeycard,
 		WhisperKey: whisperKey,
 	}
 
