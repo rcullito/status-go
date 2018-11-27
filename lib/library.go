@@ -314,6 +314,7 @@ func Login(address, password *C.char) *C.char {
 	return makeJSONResponse(err)
 }
 
+//export LoginWithKeycard
 func LoginWithKeycard(address, whisperKeyData *C.char) *C.char {
 	err := statusBackend.SelectKeycardAccount(C.GoString(address), C.GoString(whisperKeyData))
 	return makeJSONResponse(err)
