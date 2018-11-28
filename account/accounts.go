@@ -367,8 +367,10 @@ func (m *Manager) refreshSelectedAccount() {
 		return
 	}
 	m.selectedAccount = &SelectedExtKey{
+		Type:        m.selectedAccount.Type,
 		Address:     m.selectedAccount.Address,
 		AccountKey:  m.selectedAccount.AccountKey,
+		WhisperKey:  m.selectedAccount.WhisperKey,
 		SubAccounts: subAccounts,
 	}
 }
