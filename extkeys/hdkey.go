@@ -96,12 +96,20 @@ var (
 	// PublicKeyVersion is version for public key
 	PublicKeyVersion, _ = hex.DecodeString("0488B21E")
 
-	// EthBIP44ParentPath is BIP44 keys parent derivation path
+	// EthBIP44ParentPath is BIP44 keys parent's derivation path
 	EthBIP44ParentPath = []uint32{
 		HardenedKeyStart + 44,          // purpose
 		HardenedKeyStart + CoinTypeETH, // cointype set to ETH
 		HardenedKeyStart + 0,           // account
 		0,                              // 0 - public, 1 - private
+	}
+
+	// EIP1581ChatParentPath is EIP-1581 chat keys parent't derivation path
+	EIP1581ChatParentPath = []uint32{
+		HardenedKeyStart + 43,          // purpose
+		HardenedKeyStart + CoinTypeETH, // cointype set to ETH
+		HardenedKeyStart + 1581,        // EIP-1581 subpurpose
+		HardenedKeyStart + 0,           // key_type (chat)
 	}
 )
 
@@ -265,6 +273,27 @@ func (k *ExtendedKey) EthBIP44Child(i uint32) (*ExtendedKey, error) {
 
 	// m/44'/60'/0'/0/index
 	extKey, err := k.Derive(append(EthBIP44ParentPath, i))
+	if err != nil {
+		return nil, err
+	}
+
+	return extKey, nil
+}
+
+// EIP1581ChatChild returns the whisper key #i (where i is child index).
+// EIP1581ChatChild format is used is the one defined in the EIP-1581:
+// m / 43' / coin_type' / 1581' / key_type / index
+func (k *ExtendedKey) EIP1581ChatChild(i uint32) (*ExtendedKey, error) {
+	if !k.IsPrivate {
+		return nil, ErrInvalidMasterKey
+	}
+
+	if k.Depth != 0 {
+		return nil, ErrInvalidMasterKey
+	}
+
+	// m/43'/60'/1581'/0/index
+	extKey, err := k.Derive(append(EIP1581ChatParentPath, i))
 	if err != nil {
 		return nil, err
 	}
