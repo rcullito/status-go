@@ -95,6 +95,14 @@ var (
 
 	// PublicKeyVersion is version for public key
 	PublicKeyVersion, _ = hex.DecodeString("0488B21E")
+
+	// EthBIP44ParentPath is BIP44 keys parent derivation path
+	EthBIP44ParentPath = []uint32{
+		HardenedKeyStart + 44,          // purpose
+		HardenedKeyStart + CoinTypeETH, // cointype set to ETH
+		HardenedKeyStart + 0,           // account
+		0,                              // 0 - public, 1 - private
+	}
 )
 
 // ExtendedKey represents BIP44-compliant HD key
@@ -238,7 +246,15 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 
 // BIP44Child returns Status CKD#i (where i is child index).
 // BIP44 format is used: m / purpose' / coin_type' / account' / change / address_index
+// BIP44Child is depracated in favour of EthBIP44Child
+// Param coinType is deprecatet; we override it to always use CoinTypeETH.
 func (k *ExtendedKey) BIP44Child(coinType, i uint32) (*ExtendedKey, error) {
+	return k.EthBIP44Child(i)
+}
+
+// BIP44Child returns Status CKD#i (where i is child index).
+// BIP44 format is used: m / purpose' / coin_type' / account' / change / address_index
+func (k *ExtendedKey) EthBIP44Child(i uint32) (*ExtendedKey, error) {
 	if !k.IsPrivate {
 		return nil, ErrInvalidMasterKey
 	}
@@ -248,13 +264,7 @@ func (k *ExtendedKey) BIP44Child(coinType, i uint32) (*ExtendedKey, error) {
 	}
 
 	// m/44'/60'/0'/0/index
-	extKey, err := k.Derive([]uint32{
-		HardenedKeyStart + 44,       // purpose
-		HardenedKeyStart + coinType, // cointype
-		HardenedKeyStart + 0,        // account
-		0,                           // 0 - public, 1 - private
-		i,                           // index
-	})
+	extKey, err := k.Derive(append(EthBIP44ParentPath, i))
 	if err != nil {
 		return nil, err
 	}
