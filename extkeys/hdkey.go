@@ -41,6 +41,13 @@ import (
 
 // TODO make sure we're doing this ^^^^ !!!!!!
 
+type KeyPurpose int
+
+const (
+	KeyPurposeWallet KeyPurpose = iota
+	KeyPurposeChat
+)
+
 const (
 	// HardenedKeyStart defines a starting point for hardened key.
 	// Each extended key has 2^31 normal child keys and 2^31 hardened child keys.
@@ -79,6 +86,7 @@ const (
 // errors
 var (
 	ErrInvalidKey                 = errors.New("key is invalid")
+	ErrInvalidKeyType             = errors.New("key type is invalid")
 	ErrInvalidSeed                = errors.New("seed is invalid")
 	ErrInvalidSeedLen             = fmt.Errorf("the recommended size of seed is %d-%d bits", MinSeedBytes, MaxSeedBytes)
 	ErrDerivingHardenedFromPublic = errors.New("cannot derive a hardened key from public key")
@@ -250,6 +258,16 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 		child.Version = PublicKeyVersion
 	}
 	return child, nil
+}
+func (k *ExtendedKey) ChildForPurpose(p KeyPurpose, i uint32) (*ExtendedKey, error) {
+	switch p {
+	case KeyPurposeWallet:
+		return k.EthBIP44Child(i)
+	case KeyPurposeChat:
+		return k.EIP1581ChatChild(i)
+	default:
+		return nil, ErrInvalidKeyType
+	}
 }
 
 // BIP44Child returns Status CKD#i (where i is child index).
