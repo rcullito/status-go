@@ -239,7 +239,7 @@ func CallPrivateRPC(inputJSON *C.char) *C.char {
 // just modified to handle the function arg passing
 //export CreateAccount
 func CreateAccount(password *C.char) *C.char {
-	address, pubKey, mnemonic, err := statusBackend.AccountManager().CreateAccount(C.GoString(password))
+	accountInfoData, err := statusBackend.AccountManager().CreateAccount(C.GoString(password))
 
 	errString := ""
 	if err != nil {
@@ -247,20 +247,19 @@ func CreateAccount(password *C.char) *C.char {
 		errString = err.Error()
 	}
 
-	out := AccountInfo{
-		Address:  address,
-		PubKey:   pubKey,
-		Mnemonic: mnemonic,
-		Error:    errString,
+	accountInfo := &AccountInfo{
+		accountInfoData,
+		errString,
 	}
-	outBytes, _ := json.Marshal(out)
+
+	outBytes, _ := json.Marshal(accountInfo)
 	return C.CString(string(outBytes))
 }
 
 //CreateChildAccount creates sub-account
 //export CreateChildAccount
 func CreateChildAccount(parentAddress, password *C.char) *C.char {
-	address, pubKey, err := statusBackend.AccountManager().CreateChildAccount(C.GoString(parentAddress), C.GoString(password))
+	accountInfoData, err := statusBackend.AccountManager().CreateChildAccount(C.GoString(parentAddress), C.GoString(password))
 
 	errString := ""
 	if err != nil {
@@ -268,19 +267,19 @@ func CreateChildAccount(parentAddress, password *C.char) *C.char {
 		errString = err.Error()
 	}
 
-	out := AccountInfo{
-		Address: address,
-		PubKey:  pubKey,
-		Error:   errString,
+	accountInfo := &AccountInfo{
+		accountInfoData,
+		errString,
 	}
-	outBytes, _ := json.Marshal(out)
+
+	outBytes, _ := json.Marshal(accountInfo)
 	return C.CString(string(outBytes))
 }
 
 //RecoverAccount re-creates master key using given details
 //export RecoverAccount
 func RecoverAccount(password, mnemonic *C.char) *C.char {
-	address, pubKey, err := statusBackend.AccountManager().RecoverAccount(C.GoString(password), C.GoString(mnemonic))
+	accountInfoData, err := statusBackend.AccountManager().RecoverAccount(C.GoString(password), C.GoString(mnemonic))
 
 	errString := ""
 	if err != nil {
@@ -288,13 +287,12 @@ func RecoverAccount(password, mnemonic *C.char) *C.char {
 		errString = err.Error()
 	}
 
-	out := AccountInfo{
-		Address:  address,
-		PubKey:   pubKey,
-		Mnemonic: C.GoString(mnemonic),
-		Error:    errString,
+	accountInfo := &AccountInfo{
+		accountInfoData,
+		errString,
 	}
-	outBytes, _ := json.Marshal(out)
+
+	outBytes, _ := json.Marshal(accountInfo)
 	return C.CString(string(outBytes))
 }
 

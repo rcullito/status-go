@@ -129,19 +129,21 @@ func TestManagerTestSuite(t *testing.T) {
 	testPassword := "test-password"
 
 	// Initial test - create test account
-	gethServiceProvider.EXPECT().AccountKeyStore().Return(keyStore, nil)
-	addr, pubKey, mnemonic, err := accManager.CreateAccount(testPassword)
+	gethServiceProvider.EXPECT().AccountKeyStore().Return(keyStore, nil).Times(2)
+	accountInfo, err := accManager.CreateAccount(testPassword)
 	require.NoError(t, err)
-	require.NotEmpty(t, addr)
-	require.NotEmpty(t, pubKey)
-	require.NotEmpty(t, mnemonic)
+	require.NotEmpty(t, accountInfo.Address)
+	require.NotEmpty(t, accountInfo.PubKey)
+	require.NotEmpty(t, accountInfo.ChatAddress)
+	require.NotEmpty(t, accountInfo.Mnemonic)
 
 	s := &ManagerTestSuite{
 		testAccount: testAccount{
 			"test-password",
-			addr,
-			pubKey,
-			mnemonic,
+			accountInfo.Address,
+			accountInfo.PubKey,
+			accountInfo.ChatAddress,
+			accountInfo.Mnemonic,
 		},
 		gethServiceProvider: gethServiceProvider,
 		accManager:          accManager,
@@ -167,10 +169,11 @@ type ManagerTestSuite struct {
 }
 
 type testAccount struct {
-	password string
-	address  string
-	pubKey   string
-	mnemonic string
+	password    string
+	address     string
+	pubKey      string
+	chatAddress string
+	mnemonic    string
 }
 
 // reinitMock is for reassigning a new mock node manager to account manager.
@@ -189,24 +192,25 @@ func (s *ManagerTestSuite) SetupTest() {
 
 func (s *ManagerTestSuite) TestCreateAccount() {
 	// Don't fail on empty password
-	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(s.keyStore, nil)
-	_, _, _, err := s.accManager.CreateAccount(s.password)
+	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(s.keyStore, nil).Times(2)
+	_, err := s.accManager.CreateAccount(s.password)
 	s.NoError(err)
 
-	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(nil, errKeyStore)
-	_, _, _, err = s.accManager.CreateAccount(s.password)
+	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(nil, errKeyStore).Times(2)
+	_, err = s.accManager.CreateAccount(s.password)
 	s.Equal(errKeyStore, err)
 }
 
 func (s *ManagerTestSuite) TestRecoverAccount() {
-	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(s.keyStore, nil)
-	addr, pubKey, err := s.accManager.RecoverAccount(s.password, s.mnemonic)
+	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(s.keyStore, nil).Times(2)
+	accountInfo, err := s.accManager.RecoverAccount(s.password, s.mnemonic)
 	s.NoError(err)
-	s.Equal(s.address, addr)
-	s.Equal(s.pubKey, pubKey)
+	s.Equal(s.address, accountInfo.Address)
+	s.Equal(s.pubKey, accountInfo.PubKey)
+	s.Equal(s.chatAddress, accountInfo.ChatAddress)
 
-	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(nil, errKeyStore)
-	_, _, err = s.accManager.RecoverAccount(s.password, s.mnemonic)
+	s.gethServiceProvider.EXPECT().AccountKeyStore().Return(nil, errKeyStore).Times(2)
+	_, err = s.accManager.RecoverAccount(s.password, s.mnemonic)
 	s.Equal(errKeyStore, err)
 }
 
@@ -264,7 +268,7 @@ func (s *ManagerTestSuite) TestCreateChildAccount() {
 	s.accManager.selectedAccount = nil
 	s.T().Run("fail_noAccount", func(t *testing.T) {
 		s.gethServiceProvider.EXPECT().AccountKeyStore().Return(s.keyStore, nil).AnyTimes()
-		_, _, err := s.accManager.CreateChildAccount("", s.password)
+		_, err := s.accManager.CreateChildAccount("", s.password)
 		s.Equal(ErrNoAccountSelected, err)
 	})
 
@@ -315,13 +319,14 @@ func (s *ManagerTestSuite) TestCreateChildAccount() {
 		s.T().Run(testCase.name, func(t *testing.T) {
 			s.reinitMock()
 			s.gethServiceProvider.EXPECT().AccountKeyStore().Return(testCase.accountKeyStoreReturn...).AnyTimes()
-			childAddr, childPubKey, err := s.accManager.CreateChildAccount(testCase.address, testCase.password)
+			childAccountInfo, err := s.accManager.CreateChildAccount(testCase.address, testCase.password)
 			if testCase.expectedError != nil {
 				s.Equal(testCase.expectedError, err)
 			} else {
 				s.NoError(err)
-				s.NotEmpty(childAddr)
-				s.NotEmpty(childPubKey)
+				s.NotEmpty(childAccountInfo.Address)
+				s.Empty(childAccountInfo.PubKey)
+				s.Empty(childAccountInfo.ChatAddress)
 			}
 		})
 	}

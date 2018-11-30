@@ -13,6 +13,16 @@ var (
 	ErrInvalidAccountAddressOrKey = errors.New("cannot parse address or key to valid account address")
 )
 
+// AccountInfo represents account's info.
+type AccountInfo struct {
+	// Wallet address
+	Address string `json:"address"`
+	// Chat Public key
+	PubKey      string `json:"pubkey"`
+	ChatAddress string `json:"chatAddress"`
+	Mnemonic    string `json:"mnemonic"`
+}
+
 // SelectedExtKey is a container for the selected (logged in) external account.
 type SelectedExtKey struct {
 	Address     common.Address
